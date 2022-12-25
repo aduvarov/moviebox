@@ -1,5 +1,6 @@
 const express = require('express');
-const { getDb, connectToDb } = require('./db');
+const { ObjectId } = require('mongodb');
+const { getDb, connectToDb } = require('./db.js');
 
 const PORT = 3000;
 const app = express();
@@ -17,6 +18,10 @@ connectToDb(error => {
     }
 });
 
+const handleError = (res, error) => {
+    res.status(500).json({ error });
+};
+
 app.get('/movies', (req, res) => {
     const movies = [];
     db.collection('movies')
@@ -26,8 +31,31 @@ app.get('/movies', (req, res) => {
         .then(() => {
             res.status(200).json(movies);
         })
-        .catch(error => {
-            console.log(`ERROR: ${error}`);
-            res.status(500).json({ error: 'Something wrong' });
-        });
+        .catch(() => handleError(res, 'Something wrong'));
+});
+
+app.get('/movies/:id', (req, res) => {
+    if (ObjectId.isValid(req.params.id)) {
+        db.collection('movies')
+            .findOne({ _id: ObjectId(req.params.id) })
+            .then(doc => {
+                res.status(200).json(doc);
+            })
+            .catch(() => handleError(res, 'Something wrong'));
+    } else {
+        handleError(res, 'Wrong id');
+    }
+});
+
+app.delete('/movies/:id', (req, res) => {
+    if (ObjectId.isValid(req.params.id)) {
+        db.collection('movies')
+            .deleteOne({ _id: ObjectId(req.params.id) })
+            .then(result => {
+                res.status(200).json(result);
+            })
+            .catch(() => handleError(res, 'Something wrong'));
+    } else {
+        handleError(res, 'Wrong id');
+    }
 });
